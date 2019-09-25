@@ -11,6 +11,7 @@ import Distribution.Utils.ShortText
 import Prelude ()
 
 import Distribution.Parsec
+import Distribution.FieldGrammar.Described
 import Distribution.Pretty
 import Distribution.Types.PackageName
 
@@ -55,6 +56,9 @@ instance Pretty UnqualComponentName where
 
 instance Parsec UnqualComponentName where
   parsec = mkUnqualComponentName <$> parsecUnqualComponentName
+
+instance Described UnqualComponentName where
+  describe _ = RENamed "unqualified-component-name"
 
 instance NFData UnqualComponentName where
   rnf (UnqualComponentName pkg) = rnf pkg
