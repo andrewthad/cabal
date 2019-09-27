@@ -73,45 +73,72 @@ main = do
 
     tellavai :: Maybe CabalSpecVersion -> IO ()
     tellavai Nothing  = return ()
-    tellavai (Just v) = putStrLn $ "  * since ``cabal-version: " ++ showCabalSpecVersion v ++ "``"
+    tellavai (Just v) = putStrLn $ "  * available since ``cabal-version: " ++ showCabalSpecVersion v ++ "``"
+
+    telldepr :: Maybe CabalSpecVersion -> IO ()
+    telldepr Nothing  = return ()
+    telldepr (Just v) = putStrLn $ "  * deprecated since ``cabal-version: " ++ showCabalSpecVersion v ++ "``"
+
+    tellremo :: Maybe CabalSpecVersion -> IO ()
+    tellremo Nothing  = return ()
+    tellremo (Just v) = putStrLn $ "  * removed in ``cabal-version: " ++ showCabalSpecVersion v ++ "``"
+
 
     outputReference :: Reference a b -> IO ()
     outputReference (Reference ref) = void $ flip Map.traverseWithKey ref $ \fn d -> case d of
-        FieldDesc as (BooleanFieldDesc def) -> do
+        FieldDesc as ri ds (BooleanFieldDesc def) -> do
             tellname fn
             putStrLn "  * format: ``True|False``"
+            putStrLn $ "  * default: ``" ++ show def ++ "``"
             tellavai as
+            telldepr ds
+            tellremo ri
             moredesc fn
 
-        FieldDesc as (UniqueField desc) -> do
+        FieldDesc as ri ds (UniqueField desc) -> do
             tellname fn
+            putStrLn "  * required field"
             putStrLn $ "  * format: ``" ++ show desc ++ "``"
             tellavai as
+            telldepr ds
+            tellremo ri
             moredesc fn
 
-        FieldDesc as (FreeTextField) -> do
+        FieldDesc as ri ds (FreeTextField) -> do
             tellname fn
+            putStrLn "  * optional field"
             putStrLn "  * format: free text field"
             tellavai as
+            telldepr ds
+            tellremo ri
             moredesc fn
 
-        FieldDesc as (OptionalFieldAla desc) -> do
+        FieldDesc as ri ds (OptionalFieldAla desc) -> do
             tellname fn
+            putStrLn "  * optional field"
             putStrLn $ "  * format: ``" ++ show desc ++ "``"
             tellavai as
+            telldepr ds
+            tellremo ri
             moredesc fn
 
-        FieldDesc as (OptionalFieldDefAla desc def) -> do
+        FieldDesc as ri ds (OptionalFieldDefAla desc def) -> do
             tellname fn
+            putStrLn "  * optional field"
             putStrLn $ "  * format: ``" ++ show desc ++ "``"
             putStrLn $ "  * default: ``" ++ show def ++ "``"
             tellavai as
+            telldepr ds
+            tellremo ri
             moredesc fn
 
-        FieldDesc as (MonoidalFieldAla desc) -> do
+        FieldDesc as ri ds (MonoidalFieldAla desc) -> do
             tellname fn
+            putStrLn "  * monoidal field"
             putStrLn $ "  * format: ``" ++ show desc ++ "``"
             tellavai as
+            telldepr ds
+            tellremo ri
             moredesc fn
 
 -------------------------------------------------------------------------------
@@ -125,20 +152,36 @@ referenceAvailableSince :: CabalSpecVersion -> Reference a b -> Reference a b
 referenceAvailableSince v (Reference m) =
     Reference (fmap (fieldDescAvailableSince v) m)
 
+referenceRemovedIn :: CabalSpecVersion -> Reference a b -> Reference a b
+referenceRemovedIn v (Reference m) =
+    Reference (fmap (fieldDescRemovedIn v) m)
+
+referenceDeprecatedSince :: CabalSpecVersion -> Reference a b -> Reference a b
+referenceDeprecatedSince v (Reference m) =
+    Reference (fmap (fieldDescDeprecatedSince v) m)
+
 (//) :: Reference a b -> Reference c d -> Reference a b
 Reference ab // Reference cd = Reference $ Map.difference ab cd
 
 fieldDescAvailableSince :: CabalSpecVersion -> FieldDesc -> FieldDesc
 fieldDescAvailableSince v d = d { fdAvailableSince = Just v }
 
+fieldDescRemovedIn :: CabalSpecVersion -> FieldDesc -> FieldDesc
+fieldDescRemovedIn v d = d { fdRemovedIn = Just v }
+
+fieldDescDeprecatedSince :: CabalSpecVersion -> FieldDesc -> FieldDesc
+fieldDescDeprecatedSince v d = d { fdDeprecatedSince = Just v }
+
 data FieldDesc = FieldDesc
-    { fdAvailableSince :: Maybe CabalSpecVersion
-    , fdDescription    :: FieldDesc'
+    { fdAvailableSince  :: Maybe CabalSpecVersion
+    , fdRemovedIn       :: Maybe CabalSpecVersion
+    , fdDeprecatedSince :: Maybe CabalSpecVersion
+    , fdDescription     :: FieldDesc'
     }
   deriving Show
 
 reference :: FieldName -> FieldDesc' -> Reference a b
-reference fn d = Reference (Map.singleton fn (FieldDesc Nothing d))
+reference fn d = Reference $ Map.singleton fn $ FieldDesc Nothing Nothing Nothing d
 
 data FieldDesc'
     = BooleanFieldDesc Bool
@@ -184,10 +227,9 @@ instance FieldGrammar Reference where
     -- hidden fields are hidden from the reference.
     hiddenField _ = Reference Map.empty
 
-    deprecatedSince _ _ r = r -- TODO
-    removedIn _ _ r = r       -- TODO
-
-    availableSince v _ r = referenceAvailableSince v r
+    deprecatedSince v _ r = referenceDeprecatedSince v r
+    removedIn       v _ r = referenceRemovedIn v r
+    availableSince  v _ r = referenceAvailableSince v r
 
 -------------------------------------------------------------------------------
 -- Header
