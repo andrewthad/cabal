@@ -75,14 +75,17 @@ main = do
     tellavai Nothing  = return ()
     tellavai (Just v) = putStrLn $ "  * available since ``cabal-version: " ++ showCabalSpecVersion v ++ "``"
 
-    telldepr :: Maybe CabalSpecVersion -> IO ()
-    telldepr Nothing  = return ()
-    telldepr (Just v) = putStrLn $ "  * deprecated since ``cabal-version: " ++ showCabalSpecVersion v ++ "``"
+    telldepr :: Maybe (CabalSpecVersion, String) -> IO ()
+    telldepr Nothing       = return ()
+    telldepr (Just (v, d)) = putStrLn $
+        "  * deprecated since ``cabal-version: " ++ showCabalSpecVersion v ++ "``. "
+        ++ d
 
-    tellremo :: Maybe CabalSpecVersion -> IO ()
-    tellremo Nothing  = return ()
-    tellremo (Just v) = putStrLn $ "  * removed in ``cabal-version: " ++ showCabalSpecVersion v ++ "``"
-
+    tellremo :: Maybe (CabalSpecVersion, String) -> IO ()
+    tellremo Nothing      = return ()
+    tellremo (Just (v,d)) = putStrLn $
+        "  * removed in ``cabal-version: " ++ showCabalSpecVersion v ++ "``. "
+        ++ d
 
     outputReference :: Reference a b -> IO ()
     outputReference (Reference ref) = void $ flip Map.traverseWithKey ref $ \fn d -> case d of
@@ -152,13 +155,13 @@ referenceAvailableSince :: CabalSpecVersion -> Reference a b -> Reference a b
 referenceAvailableSince v (Reference m) =
     Reference (fmap (fieldDescAvailableSince v) m)
 
-referenceRemovedIn :: CabalSpecVersion -> Reference a b -> Reference a b
-referenceRemovedIn v (Reference m) =
-    Reference (fmap (fieldDescRemovedIn v) m)
+referenceRemovedIn :: CabalSpecVersion -> String -> Reference a b -> Reference a b
+referenceRemovedIn v desc (Reference m) =
+    Reference (fmap (fieldDescRemovedIn v desc) m)
 
-referenceDeprecatedSince :: CabalSpecVersion -> Reference a b -> Reference a b
-referenceDeprecatedSince v (Reference m) =
-    Reference (fmap (fieldDescDeprecatedSince v) m)
+referenceDeprecatedSince :: CabalSpecVersion -> String -> Reference a b -> Reference a b
+referenceDeprecatedSince v desc (Reference m) =
+    Reference (fmap (fieldDescDeprecatedSince v desc) m)
 
 (//) :: Reference a b -> Reference c d -> Reference a b
 Reference ab // Reference cd = Reference $ Map.difference ab cd
@@ -166,16 +169,16 @@ Reference ab // Reference cd = Reference $ Map.difference ab cd
 fieldDescAvailableSince :: CabalSpecVersion -> FieldDesc -> FieldDesc
 fieldDescAvailableSince v d = d { fdAvailableSince = Just v }
 
-fieldDescRemovedIn :: CabalSpecVersion -> FieldDesc -> FieldDesc
-fieldDescRemovedIn v d = d { fdRemovedIn = Just v }
+fieldDescRemovedIn :: CabalSpecVersion -> String -> FieldDesc -> FieldDesc
+fieldDescRemovedIn v desc d = d { fdRemovedIn = Just (v, desc) }
 
-fieldDescDeprecatedSince :: CabalSpecVersion -> FieldDesc -> FieldDesc
-fieldDescDeprecatedSince v d = d { fdDeprecatedSince = Just v }
+fieldDescDeprecatedSince :: CabalSpecVersion -> String -> FieldDesc -> FieldDesc
+fieldDescDeprecatedSince v desc d = d { fdDeprecatedSince = Just (v, desc) }
 
 data FieldDesc = FieldDesc
     { fdAvailableSince  :: Maybe CabalSpecVersion
-    , fdRemovedIn       :: Maybe CabalSpecVersion
-    , fdDeprecatedSince :: Maybe CabalSpecVersion
+    , fdRemovedIn       :: Maybe (CabalSpecVersion, String)
+    , fdDeprecatedSince :: Maybe (CabalSpecVersion, String)
     , fdDescription     :: FieldDesc'
     }
   deriving Show
@@ -227,8 +230,8 @@ instance FieldGrammar Reference where
     -- hidden fields are hidden from the reference.
     hiddenField _ = Reference Map.empty
 
-    deprecatedSince v _ r = referenceDeprecatedSince v r
-    removedIn       v _ r = referenceRemovedIn v r
+    deprecatedSince = referenceDeprecatedSince
+    removedIn       = referenceRemovedIn
     availableSince  v _ r = referenceAvailableSince v r
 
 -------------------------------------------------------------------------------

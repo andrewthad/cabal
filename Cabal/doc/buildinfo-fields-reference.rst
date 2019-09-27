@@ -49,8 +49,8 @@ build-tool-depends
 build-tools
   * monoidal field
   * format: ``{comma-separated-list={legacy-exe-dependency}}``
-  * deprecated since ``cabal-version: 2.0``
-  * removed in ``cabal-version: 3.0``
+  * deprecated since ``cabal-version: 2.0``. Please use 'build-tool-depends' field
+  * removed in ``cabal-version: 3.0``. Please use 'build-tool-depends' field.
   * more documentation about :pkg-field:`build-tools`
 
 buildable
@@ -108,8 +108,8 @@ default-language
 extensions
   * monoidal field
   * format: ``{optional-comma-separated-list={language-extension}}``
-  * deprecated since ``cabal-version: 1.12``
-  * removed in ``cabal-version: 3.0``
+  * deprecated since ``cabal-version: 1.12``. Please use 'default-extensions' or 'other-extensions' fields.
+  * removed in ``cabal-version: 3.0``. Please use 'default-extensions' or 'other-extensions' fields.
   * more documentation about :pkg-field:`extensions`
 
 extra-bundled-libraries
@@ -186,8 +186,8 @@ ghcjs-shared-options
 hs-source-dir
   * monoidal field
   * format: ``{optional-comma-separated-list={haskell-string}|[^ ,]+}``
-  * deprecated since ``cabal-version: 1.2``
-  * removed in ``cabal-version: 3.0``
+  * deprecated since ``cabal-version: 1.2``. Please use 'hs-source-dirs'
+  * removed in ``cabal-version: 3.0``. Please use 'hs-source-dirs' field.
   * more documentation about :pkg-field:`hs-source-dir`
 
 hs-source-dirs
@@ -534,7 +534,7 @@ hs-libraries
 hugs-options
   * monoidal field
   * format: ``{optional-comma-separated-list={haskell-string}|[^ ,]+}``
-  * deprecated since ``cabal-version: 1.22``
+  * deprecated since ``cabal-version: 1.22``. hugs isn't supported anymore
   * more documentation about :pkg-field:`hugs-options`
 
 id
