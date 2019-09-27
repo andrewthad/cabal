@@ -181,6 +181,8 @@ instance Parsec ExposedModules where
 instance Pretty ExposedModules where
     pretty = showExposedModules . getExposedModules
 
+instance Described ExposedModules where
+    describe _ = RENamed1 "optional-comma-separated-list" (describe (Proxy :: Proxy ExposedModule))
 
 newtype CompatPackageKey = CompatPackageKey { getCompatPackageKey :: String }
 

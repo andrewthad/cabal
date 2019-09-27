@@ -1,6 +1,7 @@
 .PHONY : all lexer sdpx lib exe doctest
 .PHONY : gen-extra-source-files gen-extra-source-files-lib gen-extra-source-files-cli
 .PHONY : cabal-install-dev cabal-install-prod
+.PHONY : phony
 
 LEXER_HS:=Cabal/Distribution/Fields/Lexer.hs
 SPDX_LICENSE_HS:=Cabal/Distribution/SPDX/LicenseId.hs
@@ -105,3 +106,7 @@ cabal-install-test:
 	$(CABALBUILD) -j3 cabal-tests cabal
 	rm -rf .ghc.environment.*
 	cd cabal-testsuite && `cabal-plan list-bin cabal-tests` --with-cabal=`cabal-plan list-bin cabal` --hide-successes -j3 ${TEST}
+
+Cabal/doc/buildinfo-fields-reference.rst : phony
+	cabal build -w ghc-8.6.5 --project-file=cabal.project.buildinfo buildinfo-reference-generator
+	$$(cabal-plan list-bin buildinfo-reference-generator) | tee $@

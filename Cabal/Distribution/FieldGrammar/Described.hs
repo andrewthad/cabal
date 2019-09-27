@@ -58,6 +58,7 @@ data Regex
     | REString  String  -- ^ literal string @abcd@
     | RECharSet CharSet -- ^ charset @[:alnum:]@
     | RENamed   String
+    | RENamed1  String Regex
   deriving (Eq, Ord, Show)
 
 reChar :: Char -> Regex
@@ -159,6 +160,7 @@ regexDoc = go 0 where
     go d (REString s)   = parensIf (d > 2) $ PP.text s
     go _ (RECharSet cs) = charsetDoc cs
     go _ (RENamed n)    = PP.braces (PP.text n)
+    go _ (RENamed1 n s) = PP.braces (PP.text n <<>> PP.char '=' <<>> go 0 s)
 
     parensIf :: Bool -> PP.Doc -> PP.Doc
     parensIf True  = PP.parens

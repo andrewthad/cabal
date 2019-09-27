@@ -68,29 +68,36 @@ class    Sep sep  where
 
     parseSep :: CabalParsing m => Proxy sep -> m a -> m [a]
 
+    describeSep :: Proxy sep -> String
+
 instance Sep CommaVCat where
     prettySep  _ = vcat . punctuate comma
     parseSep   _ p = do
         v <- askCabalSpecVersion
         if v >= CabalSpecV2_2 then parsecLeadingCommaList p else parsecCommaList p
+    describeSep _ = "comma-separated-list"
 instance Sep CommaFSep where
     prettySep _ = fsep . punctuate comma
     parseSep   _ p = do
         v <- askCabalSpecVersion
         if v >= CabalSpecV2_2 then parsecLeadingCommaList p else parsecCommaList p
+    describeSep _ = "comma-separated-list"
 instance Sep VCat where
     prettySep _  = vcat
     parseSep   _ p = do
         v <- askCabalSpecVersion
         if v >= CabalSpecV3_0 then parsecLeadingOptCommaList p else parsecOptCommaList p
+    describeSep _ = "optional-comma-separated-list"
 instance Sep FSep where
     prettySep _  = fsep
     parseSep   _ p = do
         v <- askCabalSpecVersion
         if v >= CabalSpecV3_0 then parsecLeadingOptCommaList p else parsecOptCommaList p
+    describeSep _ = "optional-comma-separated-list"
 instance Sep NoCommaFSep where
     prettySep _   = fsep
     parseSep  _ p = many (p <* P.spaces)
+    describeSep _ = "space-separated-list"
 
 -- | List separated with optional commas. Displayed with @sep@, arguments of
 -- type @a@ are parsed and pretty-printed as @b@.
@@ -119,6 +126,9 @@ instance (Newtype a b, Sep sep, Parsec b) => Parsec (List sep b a) where
 
 instance (Newtype a b, Sep sep, Pretty b) => Pretty (List sep b a) where
     pretty = prettySep (Proxy :: Proxy sep) . map (pretty . (pack :: a -> b)) . unpack
+
+instance (Newtype a b, Sep sep, Described b) => Described (List sep b a) where
+    describe _ = RENamed1 (describeSep (Proxy :: Proxy sep)) (describe (Proxy :: Proxy b))
 
 -- | Haskell string or @[^ ,]+@
 newtype Token = Token { getToken :: String }
@@ -226,6 +236,9 @@ instance Parsec TestedWith where
 instance Pretty TestedWith where
     pretty x = case unpack x of
         (compiler, vr) -> pretty compiler <+> pretty vr
+
+instance Described TestedWith where
+    describe _ = RENamed "tested-with"
 
 -- | Filepath are parsed as 'Token'.
 newtype FilePathNT = FilePathNT { getFilePathNT :: String }

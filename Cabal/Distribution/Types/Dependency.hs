@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric      #-}
 module Distribution.Types.Dependency
   ( Dependency(..)
   , depPkgName
@@ -10,26 +10,26 @@ module Distribution.Types.Dependency
   , simplifyDependency
   ) where
 
-import Prelude ()
 import Distribution.Compat.Prelude
+import Prelude ()
 
-import Distribution.Version ( VersionRange, thisVersion
-                            , notThisVersion, anyVersion
-                            , simplifyVersionRange )
+import Distribution.Version
+       (VersionRange, anyVersion, notThisVersion, simplifyVersionRange, thisVersion)
 
 import Distribution.CabalSpecVersion
-import Distribution.Pretty
-import qualified Text.PrettyPrint as PP
+import Distribution.Compat.CharParsing        (char, spaces)
+import Distribution.Compat.Parsing            (between, option)
+import Distribution.FieldGrammar.Described
 import Distribution.Parsec
-import Distribution.Compat.CharParsing (char, spaces)
-import Distribution.Compat.Parsing (between, option)
+import Distribution.Pretty
+import Distribution.Types.LibraryName
 import Distribution.Types.PackageId
 import Distribution.Types.PackageName
-import Distribution.Types.LibraryName
 import Distribution.Types.UnqualComponentName
+import Text.PrettyPrint                       ((<+>))
 
-import Text.PrettyPrint ((<+>))
-import qualified Data.Set as Set
+import qualified Data.Set         as Set
+import qualified Text.PrettyPrint as PP
 
 -- | Describes a dependency on a source package (API)
 --
@@ -96,6 +96,9 @@ instance Parsec Dependency where
             parseMultipleLibs pn = between (char '{' *> spaces)
                                            (spaces <* char '}')
                                            $ parsecCommaList $ parseLib pn
+
+instance Described Dependency where
+    describe _ = RENamed "dependency"
 
 -- mempty should never be in a Dependency-as-dependency.
 -- This is only here until the Dependency-as-constraint problem is solved #5570.

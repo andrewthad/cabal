@@ -14,9 +14,6 @@ import Distribution.CabalSpecVersion       (CabalSpecVersion)
 import Distribution.Compat.Newtype         (Newtype)
 import Distribution.FieldGrammar.Described (Described)
 import Distribution.Fields.Field
-import Distribution.Parsec                 (Parsec)
-import Distribution.Pretty                 (Pretty)
-
 
 -- | 'FieldGrammar' is parametrised by
 --
@@ -88,7 +85,7 @@ class FieldGrammar g where
     -- /Note:/ 'optionalFieldAla' is a @monoidalField@ with 'Last' monoid.
     --
     monoidalFieldAla
-        :: (Parsec b, Pretty b, Monoid a, Newtype a b)
+        :: (Described b, Monoid a, Newtype a b)
         => FieldName   -- ^ field name
         -> (a -> b)    -- ^ 'pack'
         -> ALens' s a  -- ^ lens into the field
@@ -154,7 +151,7 @@ optionalFieldDef fn = optionalFieldDefAla fn Identity
 
 -- | Field which can be define multiple times, and the results are @mappend@ed.
 monoidalField
-    :: (FieldGrammar g, Parsec a, Pretty a, Monoid a)
+    :: (FieldGrammar g, Described a, Monoid a)
     => FieldName   -- ^ field name
     -> ALens' s a  -- ^ lens into the field
     -> g s a

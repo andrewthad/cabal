@@ -862,6 +862,9 @@ instance Parsec Extension where
 instance Pretty KnownExtension where
   pretty ke = Disp.text (show ke)
 
+instance Described Extension where
+    describe _ = RENamed "language-extension"
+
 classifyExtension :: String -> Extension
 classifyExtension string
   = case classifyKnownExtension string of

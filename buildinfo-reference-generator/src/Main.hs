@@ -4,6 +4,7 @@ module Main (main) where
 import Data.Map.Strict (Map)
 
 import Control.Monad                                (void)
+import Distribution.CabalSpecVersion
 import Distribution.Compat.Newtype                  (pack')
 import Distribution.FieldGrammar.Class
 import Distribution.FieldGrammar.Described
@@ -70,32 +71,47 @@ main = do
         putStrLn $ "  * more documentation about :pkg-field:`" ++ fromUTF8BS fn ++ "`"
         putStrLn ""
 
+    tellavai :: Maybe CabalSpecVersion -> IO ()
+    tellavai Nothing  = return ()
+    tellavai (Just v) = putStrLn $ "  * since ``cabal-version: " ++ showCabalSpecVersion v ++ "``"
+
     outputReference :: Reference a b -> IO ()
     outputReference (Reference ref) = void $ flip Map.traverseWithKey ref $ \fn d -> case d of
-        BooleanFieldDesc def -> do
+        FieldDesc as (BooleanFieldDesc def) -> do
             tellname fn
             putStrLn "  * format: ``True|False``"
+            tellavai as
             moredesc fn
 
-        UniqueField desc -> do
+        FieldDesc as (UniqueField desc) -> do
             tellname fn
             putStrLn $ "  * format: ``" ++ show desc ++ "``"
+            tellavai as
             moredesc fn
 
-        FreeTextField -> do
+        FieldDesc as (FreeTextField) -> do
             tellname fn
             putStrLn "  * format: free text field"
+            tellavai as
             moredesc fn
 
-        OptionalFieldAla desc -> do
+        FieldDesc as (OptionalFieldAla desc) -> do
             tellname fn
             putStrLn $ "  * format: ``" ++ show desc ++ "``"
+            tellavai as
             moredesc fn
 
-        OptionalFieldDefAla desc def -> do
+        FieldDesc as (OptionalFieldDefAla desc def) -> do
             tellname fn
             putStrLn $ "  * format: ``" ++ show desc ++ "``"
             putStrLn $ "  * default: ``" ++ show def ++ "``"
+            tellavai as
+            moredesc fn
+
+        FieldDesc as (MonoidalFieldAla desc) -> do
+            tellname fn
+            putStrLn $ "  * format: ``" ++ show desc ++ "``"
+            tellavai as
             moredesc fn
 
 -------------------------------------------------------------------------------
@@ -105,15 +121,32 @@ main = do
 newtype Reference a b = Reference (Map FieldName FieldDesc)
   deriving (Functor)
 
+referenceAvailableSince :: CabalSpecVersion -> Reference a b -> Reference a b
+referenceAvailableSince v (Reference m) =
+    Reference (fmap (fieldDescAvailableSince v) m)
+
 (//) :: Reference a b -> Reference c d -> Reference a b
 Reference ab // Reference cd = Reference $ Map.difference ab cd
 
-data FieldDesc
+fieldDescAvailableSince :: CabalSpecVersion -> FieldDesc -> FieldDesc
+fieldDescAvailableSince v d = d { fdAvailableSince = Just v }
+
+data FieldDesc = FieldDesc
+    { fdAvailableSince :: Maybe CabalSpecVersion
+    , fdDescription    :: FieldDesc'
+    }
+  deriving Show
+
+reference :: FieldName -> FieldDesc' -> Reference a b
+reference fn d = Reference (Map.singleton fn (FieldDesc Nothing d))
+
+data FieldDesc'
     = BooleanFieldDesc Bool
     | UniqueField  PP.Doc  -- ^ not used in BuildInfo
     | FreeTextField        -- ^ not user in BuildInfo
     | OptionalFieldAla PP.Doc
     | OptionalFieldDefAla PP.Doc PP.Doc
+    | MonoidalFieldAla PP.Doc
   deriving Show
 
 instance Applicative (Reference a) where
@@ -124,26 +157,25 @@ instance FieldGrammar Reference where
     blurFieldGrammar _ (Reference xs) = Reference xs
 
     uniqueFieldAla fn pack _l =
-        Reference $ Map.singleton fn $ UniqueField (describeDoc pack)
+        reference fn $ UniqueField (describeDoc pack)
 
     booleanFieldDef fn _l def =
-        Reference $ Map.singleton fn $ BooleanFieldDesc def
+        reference fn $ BooleanFieldDesc def
 
     optionalFieldAla fn pack _l =
-        Reference $ Map.singleton fn $ OptionalFieldAla (describeDoc pack)
+        reference fn $ OptionalFieldAla (describeDoc pack)
 
     optionalFieldDefAla fn pack _l def =
-        Reference $ Map.singleton fn $ OptionalFieldDefAla
+        reference fn $ OptionalFieldDefAla
             (describeDoc pack)
             (pretty $ pack' pack def)
 
-    freeTextField fn _l =
-        Reference $ Map.singleton fn FreeTextField
+    freeTextField fn _l = reference fn FreeTextField
 
-    freeTextFieldDef fn _l =
-        Reference $ Map.singleton fn FreeTextField
+    freeTextFieldDef fn _l = reference fn FreeTextField
 
-    monoidalFieldAla fn _pack l = Reference Map.empty -- TODO
+    monoidalFieldAla fn pack l =
+        reference fn (MonoidalFieldAla (describeDoc pack))
 
     prefixedFields _pfx _l = Reference Map.empty
 
@@ -154,7 +186,8 @@ instance FieldGrammar Reference where
 
     deprecatedSince _ _ r = r -- TODO
     removedIn _ _ r = r       -- TODO
-    availableSince _ _ r = r  -- TODO
+
+    availableSince v _ r = referenceAvailableSince v r
 
 -------------------------------------------------------------------------------
 -- Header

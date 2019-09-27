@@ -10,11 +10,12 @@ import Prelude ()
 import Distribution.Types.PkgconfigName
 import Distribution.Types.PkgconfigVersionRange
 
+import Distribution.FieldGrammar.Described
 import Distribution.Parsec
 import Distribution.Pretty
 
 import qualified Distribution.Compat.CharParsing as P
-import           Text.PrettyPrint           ((<+>))
+import           Text.PrettyPrint                ((<+>))
 
 -- | Describes a dependency on a pkg-config library
 --
@@ -37,3 +38,6 @@ instance Parsec PkgconfigDependency where
         P.spaces
         verRange <- parsec <|> pure anyPkgconfigVersion
         pure $ PkgconfigDependency name verRange
+
+instance Described PkgconfigDependency where
+    describe _ = RENamed "pkgconfig-dependency"
